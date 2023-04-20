@@ -2,6 +2,11 @@
 
 GKE Memory Calculator is a command-line utility to calculate allocatable memory in a Google Kubernetes Engine (GKE) node, taking into account standard GKE memory reservations and optional container streaming reservations.
 
+Based on following documentation pages:
+
+- <https://cloud.google.com/kubernetes-engine/docs/concepts/plan-node-sizes#memory_and_cpu_reservations>
+- <https://cloud.google.com/kubernetes-engine/docs/how-to/image-streaming#memory_reservation_for>
+
 ## Requirements
 
 - Python 3.6 or higher
