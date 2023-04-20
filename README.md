@@ -2,7 +2,7 @@
 
 GKE Memory Calculator is a command-line utility to calculate allocatable memory in a Google Kubernetes Engine (GKE) node, taking into account standard GKE memory reservations and optional container streaming reservations.
 
-Based on following documentation pages:
+Based on the following documentation pages:
 
 - <https://cloud.google.com/kubernetes-engine/docs/concepts/plan-node-sizes#memory_and_cpu_reservations>
 - <https://cloud.google.com/kubernetes-engine/docs/how-to/image-streaming#memory_reservation_for>
@@ -26,17 +26,27 @@ python gke_memory_calculator.py 150
 Output:
 
 ```bash
-Allocatable memory: 118.564 GiB
+Machine has 150.0 GiB of memory, reserving 25% of the first 4 GiB, 20% of the next 4 GiB, 10% of the next 8 GiB, 6% of the next 112 GiB, and 2% of any memory above 128 GiB
+Reserving an additional 100 MiB for Pod eviction
+Standard GKE reserved memory: 9.8577 GiB
+Total reserved memory: 9.8577 GiB
+Allocatable memory: 140.1423 GiB
 ```
 
 Calculate allocatable memory with standard GKE reservations and container streaming reservations for a node with 150 GiB of total memory:
 
 ```bash
-python gke_memory_calculator.py 150 --streaming
+python gke_memory_calculator.py 1 --streaming
 ```
 
 Output:
 
 ```bash
-Allocatable memory: 116.051328 GiB
+Machine has 150.0 GiB of memory, reserving 25% of the first 4 GiB, 20% of the next 4 GiB, 10% of the next 8 GiB, 6% of the next 112 GiB, and 2% of any memory above 128 GiB
+Reserving an additional 100 MiB for Pod eviction
+Standard GKE reserved memory: 9.8577 GiB
+Machine has 150.0 GiB of memory, reserving 10% of the first 4 GiB, 8% of the next 4 GiB, 4% of the next 8 GiB, 2.4% of the next 112 GiB, and 0.8% of any memory above 128 GiB for container streaming
+Container streaming reserved memory: 3.9040 GiB
+Total reserved memory: 13.7617 GiB
+Allocatable memory: 136.2383 GiB
 ```
