@@ -36,7 +36,7 @@ Allocatable memory: 140.1423 GiB
 Calculate allocatable memory with standard GKE reservations and container streaming reservations for a node with 150 GiB of total memory:
 
 ```bash
-python gke_memory_calculator.py 1 --streaming
+python gke_memory_calculator.py 150 --streaming
 ```
 
 Output:
