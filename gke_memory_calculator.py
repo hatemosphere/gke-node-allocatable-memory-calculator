@@ -2,6 +2,10 @@ import argparse
 from typing import Tuple
 
 
+def gb_to_gib(gb: float) -> float:
+    return gb * (1000 ** 3) / (1024 ** 3)
+
+
 def container_streaming_reserved_memory(total_memory_gib: float, verbose: bool = False) -> float:
     reserved_memory = 0
 
@@ -81,37 +85,41 @@ def standard_gke_reserved_memory(total_memory_gib: float, verbose: bool = False)
     return reserved_memory
 
 
-def parse_arguments() -> Tuple[float, bool]:
+def parse_arguments() -> Tuple[float, bool, str]:
     parser = argparse.ArgumentParser(
         description="Calculate allocatable memory in a GKE node")
-    parser.add_argument("total_memory_gib", type=float,
-                        help="Total memory in GiB")
+    parser.add_argument("total_memory", type=float,
+                        help="Total memory in GB or GiB")
+    parser.add_argument("--unit", choices=["GB", "GiB"], default="GiB",
+                        help="Unit of the total memory (default: GiB)")
     parser.add_argument("--streaming", action="store_true",
                         help="Consider container streaming reservations")
 
     args = parser.parse_args()
 
-    return args.total_memory_gib, args.streaming
+    return args.total_memory, args.streaming, args.unit
 
 
 def main():
-    total_memory_gib, consider_streaming = parse_arguments()
+    total_memory, consider_streaming, unit = parse_arguments()
+    if unit == "GB":
+        total_memory = gb_to_gib(total_memory)
 
     std_reserved_memory = standard_gke_reserved_memory(
-        total_memory_gib, verbose=True)
+        total_memory, verbose=True)
     print(f"Standard GKE reserved memory: {std_reserved_memory:.4f} GiB")
 
     reserved_memory = std_reserved_memory
     if consider_streaming:
         streaming_reserved_memory = container_streaming_reserved_memory(
-            total_memory_gib, verbose=True)
+            total_memory, verbose=True)
         print(
             f"Container streaming reserved memory: {streaming_reserved_memory:.4f} GiB")
         reserved_memory += streaming_reserved_memory
 
     print(f"Total reserved memory: {reserved_memory:.4f} GiB")
 
-    allocatable_memory_gib = total_memory_gib - reserved_memory
+    allocatable_memory_gib = total_memory - reserved_memory
     print(f"Allocatable memory: {allocatable_memory_gib:.4f} GiB")
 
 
