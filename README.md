@@ -13,7 +13,9 @@ Based on the following documentation pages:
 
 ## Usage
 
-To use the GKE Memory Calculator, run the `gke_memory_calculator.py` script with the total memory in GiB as the first argument. Optionally, include the `--streaming` flag to consider container streaming reservations.
+To use the GKE Memory Calculator, run the `gke_memory_calculator.py` script with the total memory in GiB or in GB (`--units GB`) as the first argument. Take into account that VM creation UI in GCP gives you memory size in GB, whereas at the same time, Kubernetes Pod resources specification is in GiB, etc.
+
+Optionally, include the `--streaming` flag to consider container streaming reservations.
 
 ### Example
 
