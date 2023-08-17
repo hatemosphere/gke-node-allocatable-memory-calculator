@@ -1,87 +1,30 @@
 import argparse
-from typing import Tuple
+from collections import namedtuple
+from typing import List, Tuple
+
+MemoryTier = namedtuple('MemoryTier', ['threshold', 'percentage', 'verbose'])
 
 
 def gb_to_gib(gb: float) -> float:
     return gb * (1000 ** 3) / (1024 ** 3)
 
 
-def container_streaming_reserved_memory(total_memory_gib: float, verbose: bool = False) -> float:
-    reserved_memory = 0
+def calculate_reserved_memory(total_memory_gib: float, memory_tiers: List[MemoryTier], verbose: bool = False) -> float:
+    reserved_memory = 0.0
+    last_threshold = 0.0
 
-    if total_memory_gib <= 1:
-        reserved_memory = 0
-        if verbose:
-            print(
-                "Machine has less than 1 GiB of memory, no additional memory reserved for container streaming")
-    elif total_memory_gib <= 4:
-        reserved_memory = 0.10 * total_memory_gib
-        if verbose:
-            print(
-                f"Machine has {total_memory_gib} GiB of memory, reserving 10% of the first 4 GiB for container streaming")
-    elif total_memory_gib <= 8:
-        reserved_memory = 0.10 * 4 + 0.08 * (total_memory_gib - 4)
-        if verbose:
-            print(
-                f"Machine has {total_memory_gib} GiB of memory, reserving 10% of the first 4 GiB and 8% of the next 4 GiB for container streaming")
-    elif total_memory_gib <= 16:
-        reserved_memory = 0.10 * 4 + 0.08 * 4 + 0.04 * (total_memory_gib - 8)
-        if verbose:
-            print(
-                f"Machine has {total_memory_gib} GiB of memory, reserving 10% of the first 4 GiB, 8% of the next 4 GiB, and 4% of the next 8 GiB for container streaming")
-    elif total_memory_gib <= 128:
-        reserved_memory = 0.10 * 4 + 0.08 * 4 + \
-            0.04 * 8 + 0.024 * (total_memory_gib - 16)
-        if verbose:
-            print(f"Machine has {total_memory_gib} GiB of memory, reserving 10% of the first 4 GiB, 8% of the next 4 GiB, 4% of the next 8 GiB, and 2.4% of the next 112 GiB for container streaming")
-    else:
-        reserved_memory = 0.10 * 4 + 0.08 * 4 + 0.04 * 8 + \
-            0.024 * 112 + 0.008 * (total_memory_gib - 128)
-        if verbose:
-            print(f"Machine has {total_memory_gib} GiB of memory, reserving 10% of the first 4 GiB, 8% of the next 4 GiB, 4% of the next 8 GiB, 2.4% of the next 112 GiB, and 0.8% of any memory above 128 GiB for container streaming")
-
-    return reserved_memory
-
-
-def standard_gke_reserved_memory(total_memory_gib: float, verbose: bool = False) -> float:
-    reserved_memory = 0
-
-    if total_memory_gib <= 1:
-        reserved_memory = 255 / 1024
-        if verbose:
-            print("Machine has less than 1 GiB of memory, reserving 255 MiB")
-    elif total_memory_gib <= 4:
-        reserved_memory = 0.25 * total_memory_gib
-        if verbose:
-            print(
-                f"Machine has {total_memory_gib} GiB of memory, reserving 25% of the first 4 GiB")
-    elif total_memory_gib <= 8:
-        reserved_memory = 0.25 * 4 + 0.20 * (total_memory_gib - 4)
-        if verbose:
-            print(
-                f"Machine has {total_memory_gib} GiB of memory, reserving 25% of the first 4 GiB and 20% of the next 4 GiB")
-    elif total_memory_gib <= 16:
-        reserved_memory = 0.25 * 4 + 0.20 * 4 + 0.10 * (total_memory_gib - 8)
-        if verbose:
-            print(
-                f"Machine has {total_memory_gib} GiB of memory, reserving 25% of the first 4 GiB, 20% of the next 4 GiB, and 10% of the next 8 GiB")
-    elif total_memory_gib <= 128:
-        reserved_memory = 0.25 * 4 + 0.20 * 4 + \
-            0.10 * 8 + 0.06 * (total_memory_gib - 16)
-        if verbose:
-            print(
-                f"Machine has {total_memory_gib} GiB of memory, reserving 25% of the first 4 GiB, 20% of the next 4 GiB, 10% of the next 8 GiB, and 6% of the next 112 GiB")
-    else:
-        reserved_memory = 0.25 * 4 + 0.20 * 4 + 0.10 * 8 + \
-            0.06 * 112 + 0.02 * (total_memory_gib - 128)
-        if verbose:
-            print(f"Machine has {total_memory_gib} GiB of memory, reserving 25% of the first 4 GiB, 20% of the next 4 GiB, 10% of the next 8 GiB, 6% of the next 112 GiB, and 2% of any memory above 128 GiB")
-
-    reserved_memory += (100 / 1024)  # Add 100 MiB for Pod eviction
-
-    if verbose:
-        print("Reserving an additional 100 MiB for Pod eviction")
-
+    for tier in memory_tiers:
+        if total_memory_gib > tier.threshold:
+            reserved_memory += tier.percentage * \
+                (tier.threshold - last_threshold)
+            last_threshold = tier.threshold
+        else:
+            reserved_memory += tier.percentage * \
+                (total_memory_gib - last_threshold)
+            if verbose and tier.verbose:
+                print(tier.verbose.format(total_memory_gib,
+                      tier.percentage * 100, tier.percentage * 100))
+            break
     return reserved_memory
 
 
@@ -90,8 +33,8 @@ def parse_arguments() -> Tuple[float, bool, str]:
         description="Calculate allocatable memory in a GKE node")
     parser.add_argument("total_memory", type=float,
                         help="Total memory in GB or GiB")
-    parser.add_argument("--unit", choices=["GB", "GiB"], default="GiB",
-                        help="Unit of the total memory (default: GiB)")
+    parser.add_argument(
+        "--unit", choices=["GB", "GiB"], default="GiB", help="Unit of the total memory (default: GiB)")
     parser.add_argument("--streaming", action="store_true",
                         help="Consider container streaming reservations")
 
@@ -105,20 +48,52 @@ def main():
     if unit == "GB":
         total_memory = gb_to_gib(total_memory)
 
-    std_reserved_memory = standard_gke_reserved_memory(
-        total_memory, verbose=True)
+    memory_tiers_gke = [
+        MemoryTier(
+            1, 255/1024, "Machine has less than 1 GiB of memory, reserving 255 MiB"),
+        MemoryTier(
+            4, 0.25, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB"),
+        MemoryTier(
+            8, 0.20, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next 4 GiB"),
+        MemoryTier(
+            16, 0.10, "Machine has {:.2f} GiB of memory, reserving {}% of the first 8 GiB and {}% of the next 8 GiB"),
+        MemoryTier(
+            128, 0.06, "Machine has {:.2f} GiB of memory, reserving {}% of the first 16 GiB and {}% of the next 112 GiB"),
+        MemoryTier(float(
+            'inf'), 0.02, "Machine has {:.2f} GiB of memory, reserving {}% of any memory above 128 GiB")
+    ]
+
+    memory_tiers_streaming = [
+        MemoryTier(
+            1, 0, "Machine has less than 1 GiB of memory, no additional memory reserved for container streaming"),
+        MemoryTier(
+            4, 0.10, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB for container streaming"),
+        MemoryTier(
+            8, 0.08, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next 4 GiB for container streaming"),
+        MemoryTier(
+            16, 0.04, "Machine has {:.2f} GiB of memory, reserving {}% of the first 8 GiB and {}% of the next 8 GiB for container streaming"),
+        MemoryTier(
+            128, 0.024, "Machine has {:.2f} GiB of memory, reserving {}% of the first 16 GiB and {}% of the next 112 GiB for container streaming"),
+        MemoryTier(float('inf'), 0.008,
+                   "Machine has {:.2f} GiB of memory, reserving {}% of any memory above 128 GiB for container streaming")
+    ]
+
+    std_reserved_memory = calculate_reserved_memory(
+        total_memory, memory_tiers_gke, verbose=True)
     print(f"Standard GKE reserved memory: {std_reserved_memory:.4f} GiB")
 
     reserved_memory = std_reserved_memory
     if consider_streaming:
-        streaming_reserved_memory = container_streaming_reserved_memory(
-            total_memory, verbose=True)
+        streaming_reserved_memory = calculate_reserved_memory(
+            total_memory, memory_tiers_streaming, verbose=True)
         print(
             f"Container streaming reserved memory: {streaming_reserved_memory:.4f} GiB")
         reserved_memory += streaming_reserved_memory
 
-    print(f"Total reserved memory: {reserved_memory:.4f} GiB")
+    reserved_memory += (100 / 1024)  # Add 100 MiB for Pod eviction
+    print("Reserving an additional 100 MiB for Pod eviction")
 
+    print(f"Total reserved memory: {reserved_memory:.4f} GiB")
     allocatable_memory_gib = total_memory - reserved_memory
     print(f"Allocatable memory: {allocatable_memory_gib:.4f} GiB")
 
