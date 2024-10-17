@@ -67,7 +67,7 @@ def main():
         MemoryTier(
             1, 0, "Machine has less than 1 GiB of memory, no additional memory reserved for container streaming"),
         MemoryTier(
-            4, 0.10, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB for container streaming"),
+            4, 0.01, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB for container streaming"),
         MemoryTier(
             8, 0.08, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next 4 GiB for container streaming"),
         MemoryTier(
