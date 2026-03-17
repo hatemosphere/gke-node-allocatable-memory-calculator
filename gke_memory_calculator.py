@@ -43,54 +43,57 @@ def parse_arguments() -> Tuple[float, bool, str]:
     return args.total_memory, args.streaming, args.unit
 
 
+MEMORY_TIERS_GKE = [
+    MemoryTier(
+        1, 255/1024, "Machine has less than 1 GiB of memory, reserving 255 MiB"),
+    MemoryTier(
+        4, 0.25, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB"),
+    MemoryTier(
+        8, 0.20, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next 4 GiB"),
+    MemoryTier(
+        16, 0.10, "Machine has {:.2f} GiB of memory, reserving {}% of the first 8 GiB and {}% of the next 8 GiB"),
+    MemoryTier(
+        128, 0.06, "Machine has {:.2f} GiB of memory, reserving {}% of the first 16 GiB and {}% of the next 112 GiB"),
+    MemoryTier(float(
+        'inf'), 0.02, "Machine has {:.2f} GiB of memory, reserving {}% of any memory above 128 GiB")
+]
+
+MEMORY_TIERS_STREAMING = [
+    MemoryTier(
+        1, 0, "Machine has less than 1 GiB of memory, no additional memory reserved for container streaming"),
+    MemoryTier(
+        4, 0.01, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB for container streaming"),
+    MemoryTier(
+        8, 0.008, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next 4 GiB for container streaming"),
+    MemoryTier(
+        16, 0.004, "Machine has {:.2f} GiB of memory, reserving {}% of the first 8 GiB and {}% of the next 8 GiB for container streaming"),
+    MemoryTier(
+        128, 0.0024, "Machine has {:.2f} GiB of memory, reserving {}% of the first 16 GiB and {}% of the next 112 GiB for container streaming"),
+    MemoryTier(float('inf'), 0.0008,
+               "Machine has {:.2f} GiB of memory, reserving {}% of any memory above 128 GiB for container streaming")
+]
+
+EVICTION_MEMORY_GIB = 100 / 1024
+
+
 def main():
     total_memory, consider_streaming, unit = parse_arguments()
     if unit == "GB":
         total_memory = gb_to_gib(total_memory)
 
-    memory_tiers_gke = [
-        MemoryTier(
-            1, 255/1024, "Machine has less than 1 GiB of memory, reserving 255 MiB"),
-        MemoryTier(
-            4, 0.25, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB"),
-        MemoryTier(
-            8, 0.20, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next 4 GiB"),
-        MemoryTier(
-            16, 0.10, "Machine has {:.2f} GiB of memory, reserving {}% of the first 8 GiB and {}% of the next 8 GiB"),
-        MemoryTier(
-            128, 0.06, "Machine has {:.2f} GiB of memory, reserving {}% of the first 16 GiB and {}% of the next 112 GiB"),
-        MemoryTier(float(
-            'inf'), 0.02, "Machine has {:.2f} GiB of memory, reserving {}% of any memory above 128 GiB")
-    ]
-
-    memory_tiers_streaming = [
-        MemoryTier(
-            1, 0, "Machine has less than 1 GiB of memory, no additional memory reserved for container streaming"),
-        MemoryTier(
-            4, 0.01, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB for container streaming"),
-        MemoryTier(
-            8, 0.08, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next 4 GiB for container streaming"),
-        MemoryTier(
-            16, 0.04, "Machine has {:.2f} GiB of memory, reserving {}% of the first 8 GiB and {}% of the next 8 GiB for container streaming"),
-        MemoryTier(
-            128, 0.024, "Machine has {:.2f} GiB of memory, reserving {}% of the first 16 GiB and {}% of the next 112 GiB for container streaming"),
-        MemoryTier(float('inf'), 0.008,
-                   "Machine has {:.2f} GiB of memory, reserving {}% of any memory above 128 GiB for container streaming")
-    ]
-
     std_reserved_memory = calculate_reserved_memory(
-        total_memory, memory_tiers_gke, verbose=True)
+        total_memory, MEMORY_TIERS_GKE, verbose=True)
     print(f"Standard GKE reserved memory: {std_reserved_memory:.4f} GiB")
 
     reserved_memory = std_reserved_memory
     if consider_streaming:
         streaming_reserved_memory = calculate_reserved_memory(
-            total_memory, memory_tiers_streaming, verbose=True)
+            total_memory, MEMORY_TIERS_STREAMING, verbose=True)
         print(
             f"Container streaming reserved memory: {streaming_reserved_memory:.4f} GiB")
         reserved_memory += streaming_reserved_memory
 
-    reserved_memory += (100 / 1024)  # Add 100 MiB for Pod eviction
+    reserved_memory += EVICTION_MEMORY_GIB
     print("Reserving an additional 100 MiB for Pod eviction")
 
     print(f"Total reserved memory: {reserved_memory:.4f} GiB")
