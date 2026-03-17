@@ -22,8 +22,9 @@ def calculate_reserved_memory(total_memory_gib: float, memory_tiers: List[Memory
             reserved_memory += tier.percentage * \
                 (total_memory_gib - last_threshold)
             if verbose and tier.verbose:
+                tier_used = total_memory_gib - last_threshold
                 print(tier.verbose.format(total_memory_gib,
-                      tier.percentage * 100, tier.percentage * 100))
+                      tier.percentage * 100, tier.percentage * 100, tier_used))
             break
     return reserved_memory
 
@@ -49,11 +50,11 @@ MEMORY_TIERS_GKE = [
     MemoryTier(
         4, 0.25, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB"),
     MemoryTier(
-        8, 0.20, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next 4 GiB"),
+        8, 0.20, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next {:.2f} GiB"),
     MemoryTier(
-        16, 0.10, "Machine has {:.2f} GiB of memory, reserving {}% of the first 8 GiB and {}% of the next 8 GiB"),
+        16, 0.10, "Machine has {:.2f} GiB of memory, reserving {}% of the first 8 GiB and {}% of the next {:.2f} GiB"),
     MemoryTier(
-        128, 0.06, "Machine has {:.2f} GiB of memory, reserving {}% of the first 16 GiB and {}% of the next 112 GiB"),
+        128, 0.06, "Machine has {:.2f} GiB of memory, reserving {}% of the first 16 GiB and {}% of the next {:.2f} GiB"),
     MemoryTier(float(
         'inf'), 0.02, "Machine has {:.2f} GiB of memory, reserving {}% of any memory above 128 GiB")
 ]
@@ -64,11 +65,11 @@ MEMORY_TIERS_STREAMING = [
     MemoryTier(
         4, 0.01, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB for container streaming"),
     MemoryTier(
-        8, 0.008, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next 4 GiB for container streaming"),
+        8, 0.008, "Machine has {:.2f} GiB of memory, reserving {}% of the first 4 GiB and {}% of the next {:.2f} GiB for container streaming"),
     MemoryTier(
-        16, 0.004, "Machine has {:.2f} GiB of memory, reserving {}% of the first 8 GiB and {}% of the next 8 GiB for container streaming"),
+        16, 0.004, "Machine has {:.2f} GiB of memory, reserving {}% of the first 8 GiB and {}% of the next {:.2f} GiB for container streaming"),
     MemoryTier(
-        128, 0.0024, "Machine has {:.2f} GiB of memory, reserving {}% of the first 16 GiB and {}% of the next 112 GiB for container streaming"),
+        128, 0.0024, "Machine has {:.2f} GiB of memory, reserving {}% of the first 16 GiB and {}% of the next {:.2f} GiB for container streaming"),
     MemoryTier(float('inf'), 0.0008,
                "Machine has {:.2f} GiB of memory, reserving {}% of any memory above 128 GiB for container streaming")
 ]
